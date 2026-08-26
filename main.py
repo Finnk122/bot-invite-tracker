@@ -2,7 +2,25 @@ import os
 import json
 import discord
 from discord.ext import commands
+from flask import Flask
+import threading
 
+# --- PHẦN GIẢ LẬP WEB SERVER ĐỂ QUA MẶT RENDER ---
+app = Flask('')
+
+@app.route('/')
+def home():
+    return "Bot is running 24/7!"
+
+def run_web():
+    app.run(host='0.0.0.0', port=8080)
+
+def keep_alive():
+    t = threading.Thread(target=run_web)
+    t.start()
+
+
+# --- PHẦN CHÍNH CỦA BOT DISCORD ---
 CONFIG_FILE = "config.json"
 
 def load_config():
@@ -25,7 +43,7 @@ intents.message_content = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-# Cache lưu số lượng invite: {guild_id: {code: uses}} và thống kê invite của từng user: {guild_id: {user_id: count}}
+# Cache lưu trữ invite: {guild_id: {code: uses}} và thống kê: {guild_id: {user_id: count}}
 invite_cache = {}
 user_invites_count = {}
 
@@ -175,8 +193,11 @@ async def check_invites(interaction: discord.Interaction, member: discord.Member
         
     await interaction.response.send_message(f"📊 Thành viên **{target.display_name}** đã mời được tổng cộng **{count}** người vào server.", ephemeral=True)
 
-TOKEN = os.getenv("DISCORD_TOKEN")
-if TOKEN:
-    bot.run(TOKEN)
-else:
-    print("LỖI: Chưa cấu hình DISCORD_TOKEN!")
+# --- KHỞI CHẠY CHƯƠNG TRÌNH ---
+if __name__ == "__main__":
+    keep_alive()  # Chạy server ẩn để qua mặt Render
+    TOKEN = os.getenv("DISCORD_TOKEN")
+    if TOKEN:
+        bot.run(TOKEN)
+    else:
+        print("LỖI: Chưa cấu hình DISCORD_TOKEN trong Environment Variables!")
