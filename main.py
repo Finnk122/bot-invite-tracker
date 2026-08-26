@@ -4,14 +4,13 @@ import discord
 from discord.ext import commands
 from flask import Flask
 
-# --- PHẦN 1: TẠO WEB SERVER FLASK (GIỮ BOT ONLINE 24/7) ---
+# --- PHẦN 1: TẠO WEB SERVER FLASK (GIỮ BOT ONLINE) ---
 app = Flask('')
 
 
 @app.route('/')
 def home():
-  Template = "Bot is running!"
-  return Template
+  return "Bot is running!"
 
 
 def run_flask():
@@ -38,7 +37,7 @@ async def on_ready():
   print('------')
 
 
-# Ví dụ lệnh test của bạn
+# Lệnh test welcome của bạn
 @bot.tree.command(
     name="test_welcome", description="Test tính năng chào mừng"
 )
@@ -57,12 +56,11 @@ async def setup_hook():
     print(e)
 
 
-# --- PHẦN 3: CHẠY BOT ---
-# ĐIỀN TOKEN THẬT CỦA BẠN VÀO TRONG DẤU NHÁY KÉP BÊN DƯỚI:
-TOKEN = "DÁN_TOKEN_BOT_CỦA_BẠN_VÀO_ĐÂY"
+# --- PHẦN 3: TOKEN VÀ KHỞI ĐỘNG ---
+TOKEN = "MTU0MjE1NzYzNTY2MTQ3MTg4Ng.G5rSTI.KsQhAxODurEH2-9EqPC98U5EAGhVguN9XlQ_GQ"
 
 if __name__ == "__main__":
-  # Khởi động web Flask chạy ngầm trước
+  # Khởi động web Flask chạy ngầm
   keep_alive()
-  # Sau đó chạy bot Discord
+  # Khởi động bot Discord
   bot.run(TOKEN)
