@@ -94,6 +94,7 @@ async def on_member_join(member):
     rewards = conf.get("rewards", {})
 
     inviter = None
+    total_invited = 0
     try:
         old_invites = invite_cache.get(guild.id, {})
         new_invites = await guild.invites()
@@ -107,7 +108,6 @@ async def on_member_join(member):
     except Exception as e:
         print(f"Lỗi khi track invite: {e}")
 
-    total_invited = 0
     if inviter and not member.bot:
         if guild_id_str not in user_invites_count:
             user_invites_count[guild_id_str] = {}
@@ -125,6 +125,7 @@ async def on_member_join(member):
                     except Exception as ex:
                         print(f"Không thể cấp role cho user: {ex}")
 
+    # Gửi tin nhắn chào mừng độc lập để đảm bảo bot luôn báo cáo khi có người vào
     if channel_id:
         channel = guild.get_channel(int(channel_id))
         if channel:
@@ -135,7 +136,10 @@ async def on_member_join(member):
             embed = discord.Embed(description=formatted_msg, color=discord.Color.pink())
             if gif_url:
                 embed.set_image(url=gif_url)
-            await channel.send(embed=embed)
+            try:
+                await channel.send(embed=embed)
+            except Exception as ex:
+                print(f"Không thể gửi tin nhắn chào mừng: {ex}")
 
 
 # --- CÁC LỆNH SLASH ---
