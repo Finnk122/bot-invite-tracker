@@ -315,8 +315,8 @@ async def test_welcome(interaction: discord.Interaction):
 # --- KHỞI CHẠY ---
 if __name__ == "__main__":
   keep_alive()
-  # Đã gán sẵn token chuẩn của bạn vào đây
-  TOKEN = "MTU0MjE1NzYzNTY2MTQ3MTg4Ng.G5rSTI.KsQhAxODurEH2-9EqPC98U5EAGhVguN9XlQ_GQ"
+  # Token chuẩn của bạn đã được gắn trực tiếp vào đây:
+  TOKEN = ""
   if TOKEN:
     bot.run(TOKEN)
   else:
