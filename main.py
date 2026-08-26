@@ -17,7 +17,6 @@ def home():
         return "Bot is starting...", 200
 
 def run_web():
-    # Render yêu cầu dùng cổng 10000 mặc định hoặc biến môi trường PORT
     port = int(os.environ.get("PORT", 10000))
     app.run(host='0.0.0.0', port=port)
 
@@ -55,7 +54,7 @@ user_invites_count = {}
 @bot.event
 async def on_ready():
     global bot_ready
-    bot_ready = True  # Đánh dấu bot đã sẵn sàng để web server trả về 200 OK khi Render quét
+    bot_ready = True
     print(f"Logged in as {bot.user} (ID: {bot.user.id})")
     print("------")
     for guild in bot.guilds:
@@ -196,10 +195,40 @@ async def check_invites(interaction: discord.Interaction, member: discord.Member
         
     await interaction.response.send_message(f"📊 Thành viên **{target.display_name}** đã mời được tổng cộng **{count}** người vào server.", ephemeral=True)
 
+@bot.tree.command(name="test_welcome", description="Gửi tin nhắn chào mừng thử nghiệm để kiểm tra giao diện")
+@commands.has_permissions(administrator=True)
+async def test_welcome(interaction: discord.Interaction):
+    data = load_config()
+    guild_id_str = str(interaction.guild_id)
+    conf = data.get(guild_id_str, {})
+    
+    channel_id = conf.get("channel_id")
+    welcome_msg = conf.get("message", "Welcome {user}")
+    gif_url = conf.get("gif_url", "")
+
+    if not channel_id:
+        await interaction.response.send_message("❌ Bạn chưa cài đặt kênh chào mừng! Hãy dùng lệnh `/set_channel` trước.", ephemeral=True)
+        return
+
+    channel = interaction.guild.get_channel(int(channel_id))
+    if not channel:
+        await interaction.response.send_message("❌ Không tìm thấy kênh chào mừng đã cài đặt!", ephemeral=True)
+        return
+
+    formatted_msg = welcome_msg.replace("{user}", interaction.user.mention)
+    formatted_msg += f" (Được mời bởi @TestInviter - Đã mời được 1 người)"
+
+    embed = discord.Embed(description=formatted_msg, color=discord.Color.pink())
+    if gif_url:
+        embed.set_image(url=gif_url)
+
+    await channel.send(embed=embed)
+    await interaction.response.send_message("✅ Đã gửi tin nhắn test chào mừng vào kênh!", ephemeral=True)
+
 
 # --- KHỞI CHẠY ---
 if __name__ == "__main__":
-    keep_alive()  # Chạy Flask server ngầm đáp ứng yêu cầu của Render Web Service
+    keep_alive()
     TOKEN = os.getenv("DISCORD_TOKEN")
     if TOKEN:
         bot.run(TOKEN)
