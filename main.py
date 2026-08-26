@@ -61,6 +61,7 @@ async def on_ready():
         try:
             invites = await guild.invites()
             invite_cache[guild.id] = {invite.code: invite.uses for invite in invites}
+            print(f"Đã lưu cache invites cho server: {guild.name}")
         except discord.Forbidden:
             print(f"Không có quyền đọc invites ở server: {guild.name}")
     
@@ -95,18 +96,23 @@ async def on_member_join(member):
 
     inviter = None
     total_invited = 0
+    
     try:
         old_invites = invite_cache.get(guild.id, {})
         new_invites = await guild.invites()
+        
+        # Cập nhật lại cache ngay lập tức
         invite_cache[guild.id] = {inv.code: inv.uses for inv in new_invites}
         
+        # So sánh tìm ra mã invite bị tăng số lần sử dụng
         for new_inv in new_invites:
-            if new_inv.code in old_invites:
-                if new_inv.uses > old_invites[new_inv.code]:
-                    inviter = new_inv.inviter
-                    break
+            old_uses = old_invites.get(new_inv.code, 0)
+            if new_inv.uses > old_uses:
+                inviter = new_inv.inviter
+                print(f"👉 Phát hiện invite tăng: Code {new_inv.code} được dùng bởi {inviter} (Tăng từ {old_uses} lên {new_inv.uses})")
+                break
     except Exception as e:
-        print(f"Lỗi khi track invite: {e}")
+        print(f"❌ Lỗi khi track invite trong on_member_join: {e}")
 
     if inviter and not member.bot:
         if guild_id_str not in user_invites_count:
@@ -125,7 +131,7 @@ async def on_member_join(member):
                     except Exception as ex:
                         print(f"Không thể cấp role cho user: {ex}")
 
-    # Gửi tin nhắn chào mừng độc lập để đảm bảo bot luôn báo cáo khi có người vào
+    # Gửi tin nhắn chào mừng độc lập
     if channel_id:
         channel = guild.get_channel(int(channel_id))
         if channel:
@@ -140,6 +146,8 @@ async def on_member_join(member):
                 await channel.send(embed=embed)
             except Exception as ex:
                 print(f"Không thể gửi tin nhắn chào mừng: {ex}")
+    else:
+        print("⚠️ Cảnh báo: Chưa cài đặt channel_id cho server này!")
 
 
 # --- CÁC LỆNH SLASH ---
