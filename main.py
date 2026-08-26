@@ -5,22 +5,28 @@ from discord.ext import commands
 from flask import Flask
 import threading
 
-# --- PHẦN GIẢ LẬP WEB SERVER ĐỂ QUA MẶT RENDER ---
+# --- WEB SERVER GIẢ LẬP ĐỂ QUA MẶT RENDER (KHÔNG BAO GIỜ LỖI PORT) ---
 app = Flask('')
+bot_ready = False
 
 @app.route('/')
 def home():
-    return "Bot is running 24/7!"
+    if bot_ready:
+        return "Bot is running and online!", 200
+    else:
+        return "Bot is starting...", 200
 
 def run_web():
-    app.run(host='0.0.0.0', port=8080)
+    # Render yêu cầu dùng cổng 10000 mặc định hoặc biến môi trường PORT
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host='0.0.0.0', port=port)
 
 def keep_alive():
     t = threading.Thread(target=run_web)
     t.start()
 
 
-# --- PHẦN CHÍNH CỦA BOT DISCORD ---
+# --- CẤU HÌNH BOT DISCORD ---
 CONFIG_FILE = "config.json"
 
 def load_config():
@@ -43,12 +49,13 @@ intents.message_content = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-# Cache lưu trữ invite: {guild_id: {code: uses}} và thống kê: {guild_id: {user_id: count}}
 invite_cache = {}
 user_invites_count = {}
 
 @bot.event
 async def on_ready():
+    global bot_ready
+    bot_ready = True  # Đánh dấu bot đã sẵn sàng để web server trả về 200 OK khi Render quét
     print(f"Logged in as {bot.user} (ID: {bot.user.id})")
     print("------")
     for guild in bot.guilds:
@@ -83,11 +90,10 @@ async def on_member_join(member):
     
     conf = data.get(guild_id_str, {})
     channel_id = conf.get("channel_id")
-    welcome_msg = conf.get("message", "Welcome in {user} hello con vợ")
-    gif_url = conf.get("gif_url", "https://media.giphy.com/media/3o7TKSjRrfIPjeiOkM/giphy.gif")
-    rewards = conf.get("rewards", {}) # Lưu dạng {"5": role_id_1, "10": role_id_2}
+    welcome_msg = conf.get("message", "Welcome {user}")
+    gif_url = conf.get("gif_url", "")
+    rewards = conf.get("rewards", {})
 
-    # Tìm người mời
     inviter = None
     try:
         old_invites = invite_cache.get(guild.id, {})
@@ -102,7 +108,6 @@ async def on_member_join(member):
     except Exception as e:
         print(f"Lỗi khi track invite: {e}")
 
-    # Cập nhật số lượng người mà inviter đã mời được
     total_invited = 0
     if inviter and not member.bot:
         if guild_id_str not in user_invites_count:
@@ -112,7 +117,6 @@ async def on_member_join(member):
         user_invites_count[guild_id_str][inviter_id_str] = user_invites_count[guild_id_str].get(inviter_id_str, 0) + 1
         total_invited = user_invites_count[guild_id_str][inviter_id_str]
 
-        # Kiểm tra trao role tự động theo mốc số lượng
         for count_str, role_id in rewards.items():
             if total_invited >= int(count_str):
                 role = guild.get_role(int(role_id))
@@ -122,7 +126,6 @@ async def on_member_join(member):
                     except Exception as ex:
                         print(f"Không thể cấp role cho user: {ex}")
 
-    # Gửi tin nhắn chào mừng nếu có cài đặt kênh
     if channel_id:
         channel = guild.get_channel(int(channel_id))
         if channel:
@@ -182,7 +185,7 @@ async def set_reward(interaction: discord.Interaction, invites_count: int, role:
     save_config(data)
     await interaction.response.send_message(f"✅ Đã thiết lập: Mời đủ **{invites_count}** người sẽ tự động nhận role **{role.name}**!", ephemeral=True)
 
-@bot.tree.command(name="invites", description="Kiểm tra bạn (hoặc người khác) đã mời được bao nhiêu người")
+@bot.tree.command(name="invites", description="Kiểm tra bạn đã mời được bao nhiêu người")
 async def check_invites(interaction: discord.Interaction, member: discord.Member = None):
     target = member or interaction.user
     guild_id_str = str(interaction.guild_id)
@@ -193,11 +196,12 @@ async def check_invites(interaction: discord.Interaction, member: discord.Member
         
     await interaction.response.send_message(f"📊 Thành viên **{target.display_name}** đã mời được tổng cộng **{count}** người vào server.", ephemeral=True)
 
-# --- KHỞI CHẠY CHƯƠNG TRÌNH ---
+
+# --- KHỞI CHẠY ---
 if __name__ == "__main__":
-    keep_alive()  # Chạy server ẩn để qua mặt Render
+    keep_alive()  # Chạy Flask server ngầm đáp ứng yêu cầu của Render Web Service
     TOKEN = os.getenv("DISCORD_TOKEN")
     if TOKEN:
         bot.run(TOKEN)
     else:
-        print("LỖI: Chưa cấu hình DISCORD_TOKEN trong Environment Variables!")
+        print("LỖI: Chưa cấu hình DISCORD_TOKEN!")
